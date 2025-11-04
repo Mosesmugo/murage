@@ -5,42 +5,41 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beast Global Efootball League</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 10px; margin: 0; }
-  h1 { text-align: center; color: #007bff; }
-  .tab { display: flex; justify-content: center; margin-bottom: 20px; }
-  .tab button { flex: 1; padding: 15px; font-size: 16px; cursor: pointer; border: none; outline: none; transition: 0.3s; }
-  .tab button.active { background-color: #007bff; color: white; font-weight: bold; }
-  #adminSection, #memberSection { padding: 10px; }
-  #adminForm input { padding: 12px; margin: 5px 0; width: calc(50% - 12px); font-size: 16px; }
-  #adminForm button { padding: 15px 20px; font-size: 16px; background-color: #28a745; color: white; border: none; cursor: pointer; margin-top: 10px; width: 100%; }
-  #fixturesTable { width: 100%; border-collapse: collapse; margin-top: 20px; }
-  #fixturesTable th, #fixturesTable td { border: 1px solid #ccc; padding: 12px; text-align: center; }
-  #fixturesTable th { background-color: #007bff; color: white; }
-  @media(max-width:600px) {
-    #adminForm input { width: 100%; }
-  }
+  body { font-family: Arial, sans-serif; background:#f4f6f8; margin:0; padding:20px; }
+  h1 { text-align:center; color:#0d6efd; }
+  .tabs { display:flex; justify-content:center; margin-bottom:20px; }
+  .tabs button { flex:1; padding:15px; font-size:16px; cursor:pointer; border:none; outline:none; transition:.3s; }
+  .tabs button.active { background:#0d6efd; color:#fff; font-weight:bold; }
+  #adminSection, #memberSection { padding:10px; }
+  #adminForm input { padding:12px; margin:5px 0; width:calc(50% - 12px); font-size:16px; }
+  #adminForm button { padding:15px; width:100%; font-size:16px; background:#198754; color:white; border:none; cursor:pointer; margin-top:10px; }
+  table { width:100%; border-collapse:collapse; margin-top:20px; }
+  th, td { border:1px solid #ccc; padding:12px; text-align:center; }
+  th { background:#0d6efd; color:white; }
+  @media(max-width:600px){#adminForm input{width:100%;}}
+  .footer {text-align:center;margin-top:20px;color:#666;font-size:14px;}
 </style>
 </head>
 <body>
 
 <h1>Beast Global Efootball League</h1>
 
-<div class="tab">
+<div class="tabs">
   <button id="adminTab" class="active">Admin</button>
   <button id="memberTab">Member</button>
 </div>
 
 <div id="adminSection">
   <form id="adminForm">
-    <input type="text" id="teamA" placeholder="Enter Team A" required>
-    <input type="text" id="teamB" placeholder="Enter Team B" required>
-    <input type="text" id="score" placeholder="Enter Score (e.g., 0-0)" required>
+    <input type="text" id="teamA" placeholder="Team A" required>
+    <input type="text" id="teamB" placeholder="Team B" required>
+    <input type="text" id="score" placeholder="Score e.g. 0-0" required>
     <button type="submit">Add Fixture</button>
   </form>
 </div>
 
 <div id="memberSection" style="display:none;">
-  <p style="text-align:center;">Current Fixtures:</p>
+  <p style="text-align:center;font-weight:bold;">Current Fixtures</p>
 </div>
 
 <table id="fixturesTable">
@@ -53,118 +52,97 @@
   <tbody></tbody>
 </table>
 
+<div class="footer">
+  Designed for easy use by all football fans.
+</div>
+
 <script>
-// ================= Configuration =================
-const repo = "MosesMugo/murage"; // your GitHub repo path
-const token = "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
-"; // your API key / PAT
+// ========== CONFIG ==========
+const repo = "MosesMugo/murage"; // Replace with your GitHub repo
+const token = "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"; // Replace with your GitHub PAT
 const githubFilePath = "fixtures.json";
 
-// ================= Tabs =================
+// ========== TABS ==========
 const adminTab = document.getElementById("adminTab");
 const memberTab = document.getElementById("memberTab");
 const adminSection = document.getElementById("adminSection");
 const memberSection = document.getElementById("memberSection");
 
-adminTab.onclick = () => {
-  adminSection.style.display = "block";
-  memberSection.style.display = "none";
-  adminTab.classList.add("active");
-  memberTab.classList.remove("active");
-};
-memberTab.onclick = () => {
-  adminSection.style.display = "none";
-  memberSection.style.display = "block";
-  memberTab.classList.add("active");
-  adminTab.classList.remove("active");
-};
+adminTab.onclick = ()=>{adminSection.style.display="block";memberSection.style.display="none";adminTab.classList.add("active");memberTab.classList.remove("active");};
+memberTab.onclick = ()=>{adminSection.style.display="none";memberSection.style.display="block";memberTab.classList.add("active");adminTab.classList.remove("active");};
 
-// ================= Fixtures =================
-let fixtures = [];
+// ========== FIXTURES ==========
+let fixtures = JSON.parse(localStorage.getItem("fixtures") || "[]");
 
-// Load from LocalStorage first
-if(localStorage.getItem("fixtures")) {
-  fixtures = JSON.parse(localStorage.getItem("fixtures"));
-  renderFixtures();
+// Render fixtures table
+function renderFixtures(){
+  const tbody = document.querySelector("#fixturesTable tbody");
+  tbody.innerHTML="";
+  fixtures.forEach(f=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${f.match}</td><td>${f.score}</td>`;
+    tbody.appendChild(tr);
+  });
 }
 
-// ================= Admin Form =================
-const form = document.getElementById("adminForm");
-form.addEventListener("submit", async (e) => {
+// ========== ADMIN FORM ==========
+const form=document.getElementById("adminForm");
+form.addEventListener("submit", async e=>{
   e.preventDefault();
-  const teamA = document.getElementById("teamA").value.trim();
-  const teamB = document.getElementById("teamB").value.trim();
-  const score = document.getElementById("score").value.trim();
-  if(teamA && teamB && score) {
-    const fixture = { match: `${teamA} vs ${teamB}`, score };
+  const teamA=document.getElementById("teamA").value.trim();
+  const teamB=document.getElementById("teamB").value.trim();
+  const score=document.getElementById("score").value.trim();
+  if(teamA && teamB && score){
+    const fixture={match:`${teamA} vs ${teamB}`,score};
     fixtures.push(fixture);
-    localStorage.setItem("fixtures", JSON.stringify(fixtures));
+    localStorage.setItem("fixtures",JSON.stringify(fixtures));
     renderFixtures();
     await updateGitHub(fixtures);
     form.reset();
   }
 });
 
-// ================= Render Table =================
-function renderFixtures() {
-  const tbody = document.querySelector("#fixturesTable tbody");
-  tbody.innerHTML = "";
-  fixtures.forEach(f => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${f.match}</td><td>${f.score}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-// ================= GitHub API =================
-async function updateGitHub(data) {
-  try {
-    const getRes = await fetch(`https://api.github.com/repos/${repo}/contents/${githubFilePath}`, {
-      headers: { "Authorization": `token ${token}` }
+// ========== GITHUB API ==========
+async function updateGitHub(data){
+  try{
+    const getRes = await fetch(`https://api.github.com/repos/${repo}/contents/${githubFilePath}`,{
+      headers:{Authorization:`token ${token}`}
     });
     const fileData = await getRes.json();
     const sha = fileData.sha || null;
-
-    const putRes = await fetch(`https://api.github.com/repos/${repo}/contents/${githubFilePath}`, {
-      method: "PUT",
-      headers: {
-        "Authorization": `token ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        message: "Update fixtures",
-        content: btoa(JSON.stringify(data, null, 2)),
-        sha: sha
-      })
+    const putRes = await fetch(`https://api.github.com/repos/${repo}/contents/${githubFilePath}`,{
+      method:"PUT",
+      headers:{Authorization:`token ${token}`, "Content-Type":"application/json"},
+      body:JSON.stringify({message:"Update fixtures",content:btoa(JSON.stringify(data,null,2)),sha:sha})
     });
-    const result = await putRes.json();
-    console.log("GitHub updated:", result);
-  } catch (err) {
-    console.error("GitHub update failed:", err);
-  }
+    const result=await putRes.json();
+    console.log("GitHub updated:",result);
+  }catch(err){console.error("GitHub update failed:",err);}
 }
 
-// ================= Auto-sync GitHub =================
-async function fetchGitHub() {
-  try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/contents/${githubFilePath}`, {
-      headers: { "Authorization": `token ${token}` }
+// ========== AUTO SYNC ==========
+async function fetchGitHub(){
+  try{
+    const res = await fetch(`https://api.github.com/repos/${repo}/contents/${githubFilePath}`,{
+      headers:{Authorization:`token ${token}`}
     });
-    const fileData = await res.json();
-    if(fileData.content) {
-      const decoded = JSON.parse(atob(fileData.content));
-      fixtures = decoded;
-      localStorage.setItem("fixtures", JSON.stringify(fixtures));
+    const fileData=await res.json();
+    if(fileData.content){
+      const decoded=JSON.parse(atob(fileData.content));
+      fixtures=decoded;
+      localStorage.setItem("fixtures",JSON.stringify(fixtures));
       renderFixtures();
     }
-  } catch(err) {
-    console.warn("Could not fetch from GitHub, using local data.");
-  }
+  }catch(err){console.warn("Could not fetch from GitHub, using local data.");}
 }
 
 // Fetch every 10 seconds
-setInterval(fetchGitHub, 10000);
+setInterval(fetchGitHub,10000);
+
+// Initial render
+renderFixtures();
 </script>
 
 </body>
 </html>
+
