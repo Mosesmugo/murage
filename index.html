@@ -1,148 +1,81 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beast Global Efootball League</title>
-<style>
-  body { font-family: Arial, sans-serif; background:#f4f6f8; margin:0; padding:20px; }
-  h1 { text-align:center; color:#0d6efd; }
-  .tabs { display:flex; justify-content:center; margin-bottom:20px; }
-  .tabs button { flex:1; padding:15px; font-size:16px; cursor:pointer; border:none; outline:none; transition:.3s; }
-  .tabs button.active { background:#0d6efd; color:#fff; font-weight:bold; }
-  #adminSection, #memberSection { padding:10px; }
-  #adminForm input { padding:12px; margin:5px 0; width:calc(50% - 12px); font-size:16px; }
-  #adminForm button { padding:15px; width:100%; font-size:16px; background:#198754; color:white; border:none; cursor:pointer; margin-top:10px; }
-  table { width:100%; border-collapse:collapse; margin-top:20px; }
-  th, td { border:1px solid #ccc; padding:12px; text-align:center; }
-  th { background:#0d6efd; color:white; }
-  @media(max-width:600px){#adminForm input{width:100%;}}
-  .footer {text-align:center;margin-top:20px;color:#666;font-size:14px;}
-</style>
-</head>
-<body>
+import { useState, useEffect } from 'react';
+import { RoleSelector } from '@/components/RoleSelector';
+import { AdminPanel } from '@/components/admin/AdminPanel';
+import { MemberPanel } from '@/components/member/MemberPanel';
+import { GitHubStorage } from '@/lib/github';
+import { GITHUB_CONFIG, isGitHubConfigured } from '@/config/github.config';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertCircle } from 'lucide-react';
 
-<h1>Beast Global Efootball League</h1>
+const Index = () => {
+  const [githubStorage, setGithubStorage] = useState<GitHubStorage | null>(null);
+  const [role, setRole] = useState<'admin' | 'member' | null>(null);
 
-<div class="tabs">
-  <button id="adminTab" class="active">Admin</button>
-  <button id="memberTab">Member</button>
-</div>
-
-<div id="adminSection">
-  <form id="adminForm">
-    <input type="text" id="teamA" placeholder="Team A" required>
-    <input type="text" id="teamB" placeholder="Team B" required>
-    <input type="text" id="score" placeholder="Score e.g. 0-0" required>
-    <button type="submit">Add Fixture</button>
-  </form>
-</div>
-
-<div id="memberSection" style="display:none;">
-  <p style="text-align:center;font-weight:bold;">Current Fixtures</p>
-</div>
-
-<table id="fixturesTable">
-  <thead>
-    <tr>
-      <th>Match</th>
-      <th>Score</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
-
-<div class="footer">
-  Designed for easy use by all football fans.
-</div>
-
-<script>
-// ========== CONFIG ==========
-const repo = "MosesMugo/murage"; // Replace with your GitHub repo
-const token = "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"; // Replace with your GitHub PAT
-const githubFilePath = "fixtures.json";
-
-// ========== TABS ==========
-const adminTab = document.getElementById("adminTab");
-const memberTab = document.getElementById("memberTab");
-const adminSection = document.getElementById("adminSection");
-const memberSection = document.getElementById("memberSection");
-
-adminTab.onclick = ()=>{adminSection.style.display="block";memberSection.style.display="none";adminTab.classList.add("active");memberTab.classList.remove("active");};
-memberTab.onclick = ()=>{adminSection.style.display="none";memberSection.style.display="block";memberTab.classList.add("active");adminTab.classList.remove("active");};
-
-// ========== FIXTURES ==========
-let fixtures = JSON.parse(localStorage.getItem("fixtures") || "[]");
-
-// Render fixtures table
-function renderFixtures(){
-  const tbody = document.querySelector("#fixturesTable tbody");
-  tbody.innerHTML="";
-  fixtures.forEach(f=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${f.match}</td><td>${f.score}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-// ========== ADMIN FORM ==========
-const form=document.getElementById("adminForm");
-form.addEventListener("submit", async e=>{
-  e.preventDefault();
-  const teamA=document.getElementById("teamA").value.trim();
-  const teamB=document.getElementById("teamB").value.trim();
-  const score=document.getElementById("score").value.trim();
-  if(teamA && teamB && score){
-    const fixture={match:`${teamA} vs ${teamB}`,score};
-    fixtures.push(fixture);
-    localStorage.setItem("fixtures",JSON.stringify(fixtures));
-    renderFixtures();
-    await updateGitHub(fixtures);
-    form.reset();
-  }
-});
-
-// ========== GITHUB API ==========
-async function updateGitHub(data){
-  try{
-    const getRes = await fetch(`https://api.github.com/repos/${repo}/contents/${githubFilePath}`,{
-      headers:{Authorization:`token ${token}`}
-    });
-    const fileData = await getRes.json();
-    const sha = fileData.sha || null;
-    const putRes = await fetch(`https://api.github.com/repos/${repo}/contents/${githubFilePath}`,{
-      method:"PUT",
-      headers:{Authorization:`token ${token}`, "Content-Type":"application/json"},
-      body:JSON.stringify({message:"Update fixtures",content:btoa(JSON.stringify(data,null,2)),sha:sha})
-    });
-    const result=await putRes.json();
-    console.log("GitHub updated:",result);
-  }catch(err){console.error("GitHub update failed:",err);}
-}
-
-// ========== AUTO SYNC ==========
-async function fetchGitHub(){
-  try{
-    const res = await fetch(`https://api.github.com/repos/${repo}/contents/${githubFilePath}`,{
-      headers:{Authorization:`token ${token}`}
-    });
-    const fileData=await res.json();
-    if(fileData.content){
-      const decoded=JSON.parse(atob(fileData.content));
-      fixtures=decoded;
-      localStorage.setItem("fixtures",JSON.stringify(fixtures));
-      renderFixtures();
+  useEffect(() => {
+    // Initialize GitHub storage from config file
+    if (isGitHubConfigured()) {
+      setGithubStorage(new GitHubStorage(GITHUB_CONFIG));
     }
-  }catch(err){console.warn("Could not fetch from GitHub, using local data.");}
-}
+  }, []);
 
-// Fetch every 10 seconds
-setInterval(fetchGitHub,10000);
+  const handleLogout = () => {
+    setRole(null);
+    localStorage.removeItem('memberSession');
+  };
 
-// Initial render
-renderFixtures();
-</script>
+  // Show error if GitHub is not configured
+  if (!isGitHubConfigured()) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pitch-green to-pitch-dark p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 w-16 h-16 bg-destructive rounded-full flex items-center justify-center">
+              <AlertCircle className="w-8 h-8 text-destructive-foreground" />
+            </div>
+            <CardTitle className="text-2xl">GitHub Not Configured</CardTitle>
+            <CardDescription>
+              Please configure your GitHub credentials in the code
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-muted p-4 rounded-lg">
+              <p className="text-sm font-mono mb-2">src/config/github.config.ts</p>
+              <ol className="text-sm space-y-2 list-decimal list-inside">
+                <li>Add your GitHub username</li>
+                <li>Add your repository name</li>
+                <li>Add your Personal Access Token</li>
+              </ol>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Create a Personal Access Token at:{' '}
+              <a
+                href="https://github.com/settings/tokens"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline"
+              >
+                github.com/settings/tokens
+              </a>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-</body>
-</html>
+  if (!githubStorage) {
+    return null;
+  }
 
+  if (!role) {
+    return <RoleSelector onSelectRole={setRole} />;
+  }
+
+  if (role === 'admin') {
+    return <AdminPanel githubStorage={githubStorage} onLogout={handleLogout} />;
+  }
+
+  return <MemberPanel githubStorage={githubStorage} onLogout={handleLogout} />;
+};
+
+export default Index;
